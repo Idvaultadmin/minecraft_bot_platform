@@ -40,10 +40,43 @@ export const appRouter = router({
           status: 'pending',
         });
       }),
+    
     history: protectedProcedure.query(({ ctx }) => getBuildHistory(ctx.user.id)),
+    
     updateProgress: protectedProcedure
       .input(z.object({ buildId: z.number(), blocksPlaced: z.number(), status: z.string().optional() }))
       .mutation(({ input }) => updateBuildProgress(input.buildId, input.blocksPlaced, input.status)),
+    
+    sendToBots: protectedProcedure
+      .input(z.object({
+        grid: z.array(z.array(z.number())),
+        originX: z.number(),
+        originY: z.number(),
+        originZ: z.number(),
+        blockCount: z.number(),
+      }))
+      .mutation(async ({ input }) => {
+        try {
+          const response = await fetch('http://127.0.0.1:3001/build', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              grid: input.grid,
+              originX: input.originX,
+              originZ: input.originZ,
+            }),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Bot manager not responding on port 3001. Make sure master_builder_pro.js is running.');
+          }
+          
+          return { ok: true, message: 'Build sent to bots' };
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Failed to send build to bots';
+          throw new Error(message);
+        }
+      }),
   }),
 
   botStatus: router({

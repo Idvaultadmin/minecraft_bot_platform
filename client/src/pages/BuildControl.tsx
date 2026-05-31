@@ -4,7 +4,36 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { Play, Pause, RotateCcw } from "lucide-react";
+import { Play, Pause, RotateCcw, AlertCircle } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+
+function SendToBotsButton({ originX, originY, originZ, onSuccess }: { originX: number; originY: number; originZ: number; onSuccess: () => void }) {
+  const mockGrid = Array(10).fill(null).map(() => Array(10).fill(1));
+  const totalBlocks = 100;
+  
+  const sendMutation = trpc.builds.sendToBots.useMutation({
+    onSuccess: () => {
+      toast.success("Build sent to bots!");
+      onSuccess();
+    },
+    onError: (error) => {
+      toast.error(`Error: ${error.message}`);
+    },
+  });
+  
+  return (
+    <Button
+      className="flex-1"
+      size="lg"
+      onClick={() => sendMutation.mutate({ grid: mockGrid, originX, originY, originZ, blockCount: totalBlocks })}
+      disabled={sendMutation.isPending}
+    >
+      <Play className="mr-2 h-4 w-4" />
+      {sendMutation.isPending ? "Sending..." : "Send to Bots"}
+    </Button>
+  );
+}
 
 export default function BuildControl() {
   const [originX, setOriginX] = useState(0);
@@ -56,23 +85,7 @@ export default function BuildControl() {
             </div>
 
             <div className="flex gap-2 pt-4">
-              <Button
-                className="flex-1"
-                size="lg"
-                onClick={() => setIsBuilding(!isBuilding)}
-              >
-                {isBuilding ? (
-                  <>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pause
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Start Build
-                  </>
-                )}
-              </Button>
+              <SendToBotsButton originX={originX} originY={originY} originZ={originZ} onSuccess={() => setIsBuilding(true)} />
               <Button
                 variant="outline"
                 size="lg"
@@ -80,6 +93,11 @@ export default function BuildControl() {
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
+            </div>
+            
+            <div className="mt-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded flex gap-2">
+              <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-yellow-700">Make sure <code className="bg-yellow-500/20 px-1 rounded">master_builder_pro.js</code> is running on your computer</p>
             </div>
           </div>
         </Card>
