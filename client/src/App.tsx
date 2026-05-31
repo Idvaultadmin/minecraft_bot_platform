@@ -4,32 +4,44 @@ import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import DashboardLayout from "./components/DashboardLayout";
 import Home from "./pages/Home";
+import ImageBuilder from "./pages/ImageBuilder";
+import BuildControl from "./pages/BuildControl";
+import BotStatus from "./pages/BotStatus";
+import BuildHistory from "./pages/BuildHistory";
+import ServerConfig from "./pages/ServerConfig";
+import BotScriptDownload from "./pages/BotScriptDownload";
 
 function Router() {
-  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/dashboard"} nest>
+        {() => (
+          <DashboardLayout>
+            <Switch>
+              <Route path={"/image-builder"} component={ImageBuilder} />
+              <Route path={"/build-control"} component={BuildControl} />
+              <Route path={"/bot-status"} component={BotStatus} />
+              <Route path={"/history"} component={BuildHistory} />
+              <Route path={"/config"} component={ServerConfig} />
+              <Route path={"/script-download"} component={BotScriptDownload} />
+              <Route component={ImageBuilder} />
+            </Switch>
+          </DashboardLayout>
+        )}
+      </Route>
       <Route path={"/404"} component={NotFound} />
-      {/* Final fallback route */}
       <Route component={NotFound} />
     </Switch>
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
-      <ThemeProvider
-        defaultTheme="light"
-        // switchable
-      >
+      <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
           <Router />

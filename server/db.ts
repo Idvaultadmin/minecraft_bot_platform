@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users, builds, botStatus, serverConfig, InsertBuild, InsertBotStatus, InsertServerConfig } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -89,4 +89,60 @@ export async function getUserByOpenId(openId: string) {
   return result.length > 0 ? result[0] : undefined;
 }
 
-// TODO: add feature queries here as your schema grows.
+// ─── Build Management ───────────────────────────────────────────────────────
+export async function createBuild(userId: number, build: Omit<InsertBuild, 'userId'>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.insert(builds).values({ ...build, userId });
+  return result;
+}
+
+export async function getBuildHistory(userId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return db.select().from(builds).where(eq(builds.userId, userId)).orderBy(desc(builds.createdAt)).limit(limit);
+}
+
+export async function updateBuildProgress(buildId: number, blocksPlaced: number, status?: string) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const updates: Record<string, any> = { blocksPlaced };
+  if (status) updates.status = status;
+  return db.update(builds).set(updates).where(eq(builds.id, buildId));
+}
+
+// ─── Bot Status Management ──────────────────────────────────────────────────
+export async function upsertBotStatus(userId: number, botName: string, status: Partial<InsertBotStatus>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const values: any = { ...status, userId, botName };
+  return db.insert(botStatus).values(values).onDuplicateKeyUpdate({
+    set: status,
+  });
+}
+
+export async function getBotStatus(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  return db.select().from(botStatus).where(eq(botStatus.userId, userId));
+}
+
+// ─── Server Configuration ───────────────────────────────────────────────────
+export async function getServerConfig(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const result = await db.select().from(serverConfig).where(eq(serverConfig.userId, userId)).limit(1);
+  return result.length > 0 ? result[0] : null;
+}
+
+export async function upsertServerConfig(userId: number, config: Omit<InsertServerConfig, 'userId'>) {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  const existing = await getServerConfig(userId);
+  if (existing) {
+    return db.update(serverConfig).set(config).where(eq(serverConfig.userId, userId));
+  }
+  return db.insert(serverConfig).values({ ...config, userId });
+}
+
+// TODO: add additional feature queries here as your schema grows.
